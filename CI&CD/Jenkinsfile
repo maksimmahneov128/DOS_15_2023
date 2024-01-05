@@ -20,50 +20,47 @@ pipeline {
 
         stage('Build'){
             steps{
-                sh 'sudo docker build . -t ${params.DOCKERHUB_USERNAME}/public-discussion:latest'
-                sh 'sudo docker build ./nginx -t ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest'
+                sh "sudo docker build . -t ${params.DOCKERHUB_USERNAME}/public-discussion:latest"
+                sh "sudo docker build ./nginx -t ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest"
             }
         }
 
         stage('Test image') {
             steps {
                 echo 'Testing images...'
-                sh 'sudo docker image inspect ${params.DOCKERHUB_USERNAME}/public-discussion:latest'
-                sh 'sudo docker image inspect ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest'
+                sh "sudo docker image inspect ${params.DOCKERHUB_USERNAME}/public-discussion:latest"
+                sh "sudo docker image inspect ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest"
             }
         }
 
         stage('Login to Docker Hub'){
             steps{
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | sudo docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'                 
+                sh "echo $DOCKERHUB_CREDENTIALS_PSW | sudo docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"                 
                 echo 'Login Completed'                
             }
         }
 
         stage('Push Images to Docker Hub') {         
             steps{
-                sh 'sudo docker push ${params.DOCKERHUB_USERNAME}/public-discussion:latest'
-                sh 'sudo docker push ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest'
+                sh "sudo docker push ${params.DOCKERHUB_USERNAME}/public-discussion:latest"
+                sh "sudo docker push ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest"
+                sh "sudo docker system prune -f"
             }
         }
 
         stage('Deploy'){
             steps{
-                def dockerhubusername = params.DOCKERHUB_USERNAME
-                echo 'deploying on another server'
-                sh '''
-                ssh -o StrictHostKeyChecking=no ubuntu@"10.0.0.21 <<EOF
-                sh 'sudo docker compose --project-directory PublicDiscussion/ stop'
-                sh 'sudo docker compose --project-directory PublicDiscussion/ rm --force'
-                sh 'sudo rm -rf PublicDiscussion/'
-                sh 'git clone https://github.com/maksimmahneov128/PublicDiscussion.git -b main'
-                sh 'sudo docker pull ${dockerhubusername}/public-discussion:latest'
-                sh 'sudo docker pull ${dockerhubusername}/public-discussion-nginx:latest'
-                sh 'sudo docker compose --project-directory PublicDiscussion/ up -d'
-                sh 'sudo docker compose --project-directory PublicDiscussion/ exec web python manage.py collectstatic --noinput'
-                sh 'sudo docker compose --project-directory PublicDiscussion/ exec web python manage.py migrate --noinput'
-                sh 'sudo docker compose --project-directory PublicDiscussion/ exec web python manage.py createsuperuser --username adm --email aaa@aaa.ru --noinput'
-                '''
+                echo 'deploying...'
+                sh "sudo docker compose --project-directory PublicDiscussion/ stop"
+                sh "sudo docker compose --project-directory PublicDiscussion/ rm --force"
+                sh "sudo rm -rf PublicDiscussion/"
+                sh "git clone https://github.com/maksimmahneov128/PublicDiscussion.git -b main"
+                sh "sudo docker pull ${params.DOCKERHUB_USERNAME}/public-discussion:latest"
+                sh "sudo docker pull ${params.DOCKERHUB_USERNAME}/public-discussion-nginx:latest"
+                sh "sudo docker compose --project-directory PublicDiscussion/ up -d"
+                sh "sudo docker compose --project-directory PublicDiscussion/ exec web python manage.py collectstatic --noinput"
+                sh "sudo docker compose --project-directory PublicDiscussion/ exec web python manage.py migrate --noinput"
+                sh "sudo docker system prune -f"
             }
         }
     }
