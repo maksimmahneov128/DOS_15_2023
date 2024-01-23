@@ -1,5 +1,5 @@
 asgiref==3.5.0
-Django==4.1.10
+Django==4.1.13
 django-crispy-forms==1.14.0
 django-quill-editor==0.1.38
 Pillow==10.2.0
